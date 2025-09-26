@@ -1,0 +1,612 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Muthia & Rosi</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<style>
+  body, html {
+    margin: 0;
+    height: 100%;
+    overflow: hidden;
+    background: #000;
+    font-family: 'Poppins', sans-serif;
+  }
+
+  .media-container {
+    width: 100vw;
+    height: 100vh;
+    display: none;
+  }
+
+  .media-container.active {
+    display: block;
+  }
+
+  .media-container img, .media-container video {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    background: #000;
+  }
+
+  /* Layar awal untuk minta izin fullscreen */
+  .start-screen {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    gap: 16px;
+    background: #000;
+    color: #fff;
+    z-index: 10;
+    padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+  }
+
+  .start-screen button {
+    padding: 12px 20px;
+    font-size: 18px;
+    border: none;
+    border-radius: 8px;
+    background: #ff4d6d;
+    color: #fff;
+    cursor: pointer;
+    transition: all 0.3s ease;
+  }
+
+  .start-screen button:hover {
+    background: #ff2e63;
+    transform: scale(1.05);
+  }
+
+  .start-screen p {
+    margin: 0;
+    opacity: 0.8;
+    font-size: 14px;
+    text-align: center;
+    max-width: 80%;
+  }
+
+  /* Kontrol musik */
+  .music-controls {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    z-index: 20;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: rgba(0, 0, 0, 0.7);
+    padding: 10px 15px;
+    border-radius: 30px;
+    backdrop-filter: blur(5px);
+    transition: opacity 0.3s ease;
+  }
+
+  .music-controls:hover {
+    opacity: 1;
+  }
+
+  .music-icon {
+    width: 24px;
+    height: 24px;
+    cursor: pointer;
+    filter: invert(1);
+    transition: transform 0.2s ease;
+  }
+
+  .music-icon:hover {
+    transform: scale(1.1);
+  }
+
+  .volume-slider {
+    width: 80px;
+    height: 4px;
+    background: rgba(255, 255, 255, 0.3);
+    border-radius: 2px;
+    outline: none;
+    -webkit-appearance: none;
+  }
+
+  .volume-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: #ff4d6d;
+    cursor: pointer;
+  }
+
+  .volume-slider::-moz-range-thumb {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: #ff4d6d;
+    cursor: pointer;
+    border: none;
+  }
+
+  /* Indikator musik */
+  .music-visualizer {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    height: 20px;
+  }
+
+  .bar {
+    width: 3px;
+    background: #ff4d6d;
+    border-radius: 2px;
+    animation: pulse 1.5s infinite ease-in-out;
+  }
+
+  .bar:nth-child(2) { animation-delay: 0.1s; }
+  .bar:nth-child(3) { animation-delay: 0.2s; }
+  .bar:nth-child(4) { animation-delay: 0.3s; }
+  .bar:nth-child(5) { animation-delay: 0.4s; }
+
+  @keyframes pulse {
+    0%, 100% { height: 5px; }
+    50% { height: 15px; }
+  }
+
+  /* Judul lagu */
+  .song-title {
+    color: white;
+    font-size: 12px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 120px;
+  }
+
+  /* Progress bar untuk lagu */
+  .music-progress {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 3px;
+    background: rgba(255, 255, 255, 0.2);
+    z-index: 20;
+  }
+
+  .music-progress-bar {
+    height: 100%;
+    width: 0%;
+    background: #ff4d6d;
+    transition: width 0.1s linear;
+  }
+
+  /* Efek visual romantis */
+  .romantic-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 5;
+  }
+
+  .floating-heart {
+    position: absolute;
+    font-size: 24px;
+    color: rgba(255, 77, 109, 0.7);
+    animation: float 15s infinite linear;
+    opacity: 0;
+  }
+
+  @keyframes float {
+    0% {
+      transform: translateY(100vh) rotate(0deg);
+      opacity: 0;
+    }
+    10% {
+      opacity: 0.7;
+    }
+    90% {
+      opacity: 0.7;
+    }
+    100% {
+      transform: translateY(-100px) rotate(360deg);
+      opacity: 0;
+    }
+  }
+</style>
+</head>
+<body>
+
+<div class="start-screen" id="start-screen">
+  <button id="start-btn">Mulai Slideshow (Full Screen)</button>
+  <p>Klik tombol untuk memulai dan masuk layar penuh.</p>
+  <p>Video akan otomatis dimute agar dapat autoplay.</p>
+</div>
+
+<div id="slideshow-root" style="padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);"></div>
+
+<!-- Kontrol musik -->
+<div class="music-controls" id="music-controls" style="opacity: 0.8;">
+  <div class="music-visualizer">
+    <div class="bar"></div>
+    <div class="bar"></div>
+    <div class="bar"></div>
+    <div class="bar"></div>
+    <div class="bar"></div>
+  </div>
+  <img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjZmZmZmZmIiBzdHJva2Utd2lkdGg9IjIiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCI+PHBvbHlnb24gcG9pbnRzPSIxMSA1IDYgOSAyIDkgMiAxNSA2IDE1IDExIDE5IDExIDUiPjwvcG9seWdvbj48cGF0aCBkPSJNMTkuMDcgNC45M2ExMCAxMCAwIDAgMSAwIDE0LjE0TTE1LjU0IDguNDZhNSA1IDAgMCAxIDAgNy4wNyI+PC9wYXRoPjwvc3ZnPg==" class="music-icon" id="volume-icon">
+  <input type="range" min="0" max="100" value="50" class="volume-slider" id="volume-slider">
+  <div class="song-title" id="song-title">Muthia & Rosi - Forever Love</div>
+</div>
+
+<!-- Progress bar untuk lagu -->
+<div class="music-progress">
+  <div class="music-progress-bar" id="music-progress-bar"></div>
+</div>
+
+<!-- Efek visual romantis -->
+<div class="romantic-overlay" id="romantic-overlay"></div>
+
+<script>
+  // ATURAN DURASI DEFAULT
+  const IMAGE_DURATION_MS = 10000;
+  const VIDEO_DURATION_MS = 60000;
+  const REDIRECT_ON_END = 'slide3.html';
+
+  // Daftar lagu: gunakan file lokal Anda di folder audio/
+  const romanticSongs = [
+    {
+      title: "kendric lamar,sza - luther",
+      src: "audio/kendrik.mp3"
+    }
+  ];
+
+  // MUAT DARI FOLDER img/:
+  const mediaFilenames = [
+    'IMG_0610.jpeg',
+    'rosi2.jpg',
+    'IMG_2835 (2).jpg',
+    'MTVideo.mp4',
+    'MTVideo (1).mp4',
+    'rosi2.jpg',
+    'MTvideo.mp4',
+    'rosi3.jpg',
+    'MTvideo2.mp4',
+    'rosi4.jpg',
+    'rosi5.jpg',
+    'MTvideo3.mp4',
+    'rosi6.jpg',
+    'rosi7.jpg',
+    'rosi8.jpg',
+    'rosi9.jpg',
+
+  ];
+
+  function inferTypeFromExtension(filename) {
+  const lower = filename.toLowerCase();
+  const videoExtensions = ['.mp4', '.webm', '.ogg', '.mov', '.m4v', '.avi', '.wmv', '.flv', '.mkv'];
+  return videoExtensions.some(ext => lower.endsWith(ext)) ? 'video' : 'image';
+}
+
+  const mediaList = mediaFilenames.map((name) => ({
+    type: inferTypeFromExtension(name),
+    src: `img/${name}`,
+  }));
+
+  // Simpan daftar gambar saja untuk dipakai di slide3 (polaroid)
+  try {
+    const imageList = mediaList.filter(m => m.type === 'image').map(m => m.src);
+    sessionStorage.setItem('polaroidImages', JSON.stringify(imageList));
+  } catch (_) {}
+
+  // Elemen root untuk slideshow
+  const root = document.getElementById('slideshow-root');
+
+  // Buat elemen media di DOM berdasarkan mediaList
+  const mediaElements = mediaList.map((item, index) => {
+    const wrapper = document.createElement('div');
+    wrapper.className = 'media-container';
+    wrapper.id = `media-${index}`;
+
+    if (item.type === 'image') {
+      const img = document.createElement('img');
+      img.src = item.src;
+      img.alt = `Foto ${index + 1}`;
+      // Jika gambar gagal dimuat (format tidak didukung, mis. HEIC/HEIF), lewati
+      img.addEventListener('error', () => {
+        if (currentIndex === index) {
+          clearTimeout(timerId);
+          const prev = currentIndex;
+          const nextIndex = currentIndex + 1;
+          stopPreviousIfVideo(prev);
+          if (nextIndex >= mediaElements.length) {
+            if (REDIRECT_ON_END) {
+              window.location.href = REDIRECT_ON_END;
+              return;
+            }
+          }
+          currentIndex = nextIndex;
+          showIndex(currentIndex);
+        }
+      });
+      wrapper.appendChild(img);
+    } else if (item.type === 'video') {
+      const video = document.createElement('video');
+      video.src = item.src;
+      video.muted = true;
+      video.playsInline = true;
+      video.controls = false;
+      // Jika browser tidak bisa memutar, atau terjadi error, lewati
+      video.addEventListener('error', () => {
+        if (currentIndex === index) {
+          clearTimeout(timerId);
+          const prev = currentIndex;
+          const nextIndex = currentIndex + 1;
+          stopPreviousIfVideo(prev);
+          if (nextIndex >= mediaElements.length) {
+            if (REDIRECT_ON_END) {
+              window.location.href = REDIRECT_ON_END;
+              return;
+            }
+          }
+          currentIndex = nextIndex;
+          showIndex(currentIndex);
+        }
+      });
+      // Saat video berakhir, langsung lanjut tanpa menunggu timer
+      video.addEventListener('ended', () => {
+        if (currentIndex === index) {
+          clearTimeout(timerId);
+          const prev = currentIndex;
+          const nextIndex = currentIndex + 1;
+          stopPreviousIfVideo(prev);
+          if (nextIndex >= mediaElements.length) {
+            if (REDIRECT_ON_END) {
+              window.location.href = REDIRECT_ON_END;
+              return;
+            }
+          }
+          currentIndex = nextIndex;
+          showIndex(currentIndex);
+        }
+      });
+      wrapper.appendChild(video);
+    }
+
+    root.appendChild(wrapper);
+    return wrapper;
+  });
+
+  // Variabel untuk kontrol musik
+  let currentSongIndex = 0;
+  let audioPlayer = new Audio();
+  let isMusicPlaying = false;
+  let currentIndex = 0;
+  let timerId = null;
+
+  // Persist music state to continue on slide3
+  function saveMusicState() {
+    try {
+      const state = {
+        src: audioPlayer?.src || (romanticSongs[0] && romanticSongs[0].src) || '',
+        title: romanticSongs[currentSongIndex]?.title || '',
+        currentTime: audioPlayer?.currentTime || 0,
+        volume: audioPlayer?.volume ?? 0.5,
+        playing: isMusicPlaying === true
+      };
+      sessionStorage.setItem('bgMusicState', JSON.stringify(state));
+    } catch (_) {}
+  }
+
+  // Fungsi untuk memulai musik
+  function startMusic() {
+    if (romanticSongs.length === 0) return;
+    
+    // Setel lagu pertama
+    audioPlayer.src = romanticSongs[currentSongIndex].src;
+    audioPlayer.volume = document.getElementById('volume-slider').value / 100;
+    audioPlayer.loop = false; // Tidak loop, kita akan ganti lagu otomatis
+    
+    // Update judul lagu
+    document.getElementById('song-title').textContent = romanticSongs[currentSongIndex].title;
+    
+    // Coba putar musik
+    const playPromise = audioPlayer.play();
+    if (playPromise !== undefined) {
+      playPromise.then(() => {
+        isMusicPlaying = true;
+        updateMusicVisualizer(true);
+        saveMusicState();
+      }).catch(error => {
+        console.log("Autoplay diblokir:", error);
+        // Tampilkan pesan atau biarkan pengguna memulai musik secara manual
+      });
+    }
+    
+    // Event ketika lagu selesai
+    audioPlayer.addEventListener('ended', playNextSong);
+    
+    // Update progress bar
+    audioPlayer.addEventListener('timeupdate', () => {
+      updateProgressBar();
+      // Throttle save: hanya setiap ~0.5 detik
+      if (!audioPlayer._lastSave || (performance.now() - audioPlayer._lastSave) > 500) {
+        saveMusicState();
+        audioPlayer._lastSave = performance.now();
+      }
+    });
+
+    audioPlayer.addEventListener('play', () => { isMusicPlaying = true; saveMusicState(); });
+    audioPlayer.addEventListener('pause', () => { isMusicPlaying = false; saveMusicState(); });
+  }
+
+  // Fungsi untuk memainkan lagu berikutnya
+  function playNextSong() {
+    currentSongIndex = (currentSongIndex + 1) % romanticSongs.length;
+    audioPlayer.src = romanticSongs[currentSongIndex].src;
+    document.getElementById('song-title').textContent = romanticSongs[currentSongIndex].title;
+    
+    const playPromise = audioPlayer.play();
+    if (playPromise !== undefined) {
+      playPromise.then(() => {
+        isMusicPlaying = true;
+      }).catch(error => {
+        console.log("Gagal memutar lagu berikutnya:", error);
+      });
+    }
+  }
+
+  // Fungsi untuk mengupdate progress bar
+  function updateProgressBar() {
+    if (audioPlayer.duration) {
+      const progress = (audioPlayer.currentTime / audioPlayer.duration) * 100;
+      document.getElementById('music-progress-bar').style.width = `${progress}%`;
+    }
+  }
+
+  // Fungsi untuk mengupdate visualizer musik
+  function updateMusicVisualizer(playing) {
+    const visualizer = document.querySelector('.music-visualizer');
+    if (playing) {
+      visualizer.style.display = 'flex';
+    } else {
+      visualizer.style.display = 'none';
+    }
+  }
+
+  // Fungsi untuk membuat efek hati mengambang
+  function createFloatingHearts() {
+    const overlay = document.getElementById('romantic-overlay');
+    const heartCount = 15;
+    
+    for (let i = 0; i < heartCount; i++) {
+      const heart = document.createElement('div');
+      heart.className = 'floating-heart';
+      heart.innerHTML = '❤';
+      heart.style.left = `${Math.random() * 100}%`;
+      heart.style.animationDelay = `${Math.random() * 20}s`;
+      heart.style.fontSize = `${Math.random() * 20 + 15}px`;
+      overlay.appendChild(heart);
+    }
+  }
+
+  // Fungsi untuk mengontrol volume
+  function setupVolumeControl() {
+    const volumeSlider = document.getElementById('volume-slider');
+    const volumeIcon = document.getElementById('volume-icon');
+    
+    volumeSlider.addEventListener('input', function() {
+      audioPlayer.volume = this.value / 100;
+      
+      // Update ikon volume berdasarkan level
+      if (this.value == 0) {
+        volumeIcon.src = "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjZmZmZmZmIiBzdHJva2Utd2lkdGg9IjIiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCI+PHBvbHlnb24gcG9pbnRzPSIxMSA1IDYgOSAyIDkgMiAxNSA2IDE1IDExIDE5IDExIDUiPjwvcG9seWdvbj48bGluZSB4MT0iMjMiIHkxPSI5IiB4Mj0iMTciIHkyPSIxNSI+PC9saW5lPjxsaW5lIHgxPSIxNyIgeTE9IjkiIHgyPSIyMyIgeTI9IjE1Ij48L2xpbmU+PC9zdmc+";
+      } else if (this.value < 50) {
+        volumeIcon.src = "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjZmZmZmZmIiBzdHJva2Utd2lkdGg9IjIiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCI+PHBvbHlnb24gcG9pbnRzPSIxMSA1IDYgOSAyIDkgMiAxNSA2IDE1IDExIDE5IDExIDUiPjwvcG9seWdvbj48cGF0aCBkPSJNMTUuNTQgOC40NmE1IDUgMCAwIDEgMCA3LjA3Ij48L3BhdGg+PC9zdmc+";
+      } else {
+        volumeIcon.src = "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjZmZmZmZmIiBzdHJva2Utd2lkdGg9IjIiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCI+PHBvbHlnb24gcG9pbnRzPSIxMSA1IDYgOSAyIDkgMiAxNSA2IDE1IDExIDE5IDExIDUiPjwvcG9seWdvbj48cGF0aCBkPSJNMTkuMDcgNC45M2ExMCAxMCAwIDAgMSAwIDE0LjE0TTE1LjU0IDguNDZhNSA1IDAgMCAxIDAgNy4wNyI+PC9wYXRoPjwvc3ZnPg==";
+      }
+    });
+    
+    // Toggle mute/unmute saat ikon diklik
+    volumeIcon.addEventListener('click', function() {
+      if (audioPlayer.volume > 0) {
+        audioPlayer.volume = 0;
+        volumeSlider.value = 0;
+        volumeIcon.src = "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjZmZmZmZmIiBzdHJva2Utd2lkdGg9IjIiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCI+PHBvbHlnb24gcG9pbnRzPSIxMSA1IDYgOSAyIDkgMiAxNSA2IDE1IDExIDE5IDExIDUiPjwvcG9seWdvbj48bGluZSB4MT0iMjMiIHkxPSI5IiB4Mj0iMTciIHkyPSIxNSI+PC9saW5lPjxsaW5lIHgxPSIxNyIgeTE9IjkiIHgyPSIyMyIgeTI9IjE1Ij48L2xpbmU+PC9zdmc+";
+      } else {
+        audioPlayer.volume = 0.5;
+        volumeSlider.value = 50;
+        volumeIcon.src = "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjZmZmZmZmIiBzdHJva2Utd2lkdGg9IjIiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCI+PHBvbHlnb24gcG9pbnRzPSIxMSA1IDYgOSAyIDkgMiAxNSA2IDE1IDExIDE9IDExIDUiPjwvcG9seWdvbj48cGF0aCBkPSJNMTkuMDcgNC45M2ExMCAxMCAwIDAgMSAwIDE0LjE0TTE1LjU0IDguNDZhNSA1IDAgMCAxIDAgNy4wNyI+PC9wYXRoPjwvc3ZnPg==";
+      }
+    });
+  }
+
+  // Fungsi slideshow
+  function hideAll() {
+    mediaElements.forEach(el => el.classList.remove('active'));
+  }
+
+  function stopPreviousIfVideo(prevIndex) {
+    const prev = mediaElements[prevIndex];
+    if (!prev) return;
+    const vid = prev.querySelector('video');
+    if (vid) {
+      vid.pause();
+      try { vid.currentTime = 0; } catch (_) {}
+    }
+  }
+
+  function showIndex(index) {
+    hideAll();
+    const wrapper = mediaElements[index];
+    if (!wrapper) return;
+    wrapper.classList.add('active');
+
+    const item = mediaList[index];
+    const duration = typeof item.duration === 'number'
+      ? item.duration
+      : (item.type === 'image' ? IMAGE_DURATION_MS : VIDEO_DURATION_MS);
+
+    const vid = wrapper.querySelector('video');
+    if (vid) {
+      const playPromise = vid.play();
+      if (playPromise && typeof playPromise.then === 'function') {
+        playPromise.catch(() => {});
+      }
+    }
+
+    clearTimeout(timerId);
+    timerId = setTimeout(() => {
+      const prev = currentIndex;
+      const nextIndex = currentIndex + 1;
+      if (nextIndex >= mediaElements.length) {
+        stopPreviousIfVideo(prev);
+        if (REDIRECT_ON_END) {
+          // Simpan state musik sebelum redirect
+          saveMusicState();
+          window.location.href = REDIRECT_ON_END;
+          return;
+        }
+      }
+      currentIndex = nextIndex;
+      stopPreviousIfVideo(prev);
+      showIndex(currentIndex);
+    }, duration);
+  }
+
+  async function enterFullscreen() {
+    const el = document.documentElement;
+    if (el.requestFullscreen) return el.requestFullscreen();
+    if (el.webkitRequestFullscreen) return el.webkitRequestFullscreen();
+    if (el.msRequestFullscreen) return el.msRequestFullscreen();
+  }
+
+  function startSlideshow() {
+    if (mediaElements.length === 0) return;
+    currentIndex = 0;
+    showIndex(currentIndex);
+    
+    // Mulai musik
+    startMusic();
+    
+    // Buat efek hati mengambang
+    createFloatingHearts();
+    
+    // Setup kontrol volume
+    setupVolumeControl();
+  }
+
+  // Start screen logic
+  const startBtn = document.getElementById('start-btn');
+  const startScreen = document.getElementById('start-screen');
+  startBtn.addEventListener('click', async () => {
+    try { await enterFullscreen(); } catch (_) {}
+    startScreen.style.display = 'none';
+    startSlideshow();
+  });
+</script>
+</body>
+</html>
