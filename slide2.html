@@ -251,7 +251,7 @@
 
 <script>
   // ATURAN DURASI DEFAULT
-  const IMAGE_DURATION_MS = 10000;
+  const IMAGE_DURATION_MS = 1000;
   const VIDEO_DURATION_MS = 60000;
   const REDIRECT_ON_END = 'slide3.html';
 
@@ -268,19 +268,17 @@
     'IMG_0610.jpeg',
     'rosi2.jpg',
     'IMG_2835 (2).jpg',
-    'MTVideo.mp4',
-    'MTVideo (1).mp4',
+    'IMG_1422.mp4',
+    'IMG_2155.mp4',
     'rosi2.jpg',
-    'MTvideo.mp4',
-    'rosi3.jpg',
-    'MTvideo2.mp4',
-    'rosi4.jpg',
-    'rosi5.jpg',
-    'MTvideo3.mp4',
-    'rosi6.jpg',
-    'rosi7.jpg',
-    'rosi8.jpg',
-    'rosi9.jpg',
+    'IMG_2689.mp4',
+    'rosi3.JPG',
+    'rosi4.JPG',
+    'rosi5.JPG',
+    'rosi6.JPG',
+    'rosi7.JPG',
+    'rosi8.JPG',
+    'rosi9.JPG',
 
   ];
 
@@ -294,12 +292,6 @@
     type: inferTypeFromExtension(name),
     src: `img/${name}`,
   }));
-
-  // Simpan daftar gambar saja untuk dipakai di slide3 (polaroid)
-  try {
-    const imageList = mediaList.filter(m => m.type === 'image').map(m => m.src);
-    sessionStorage.setItem('polaroidImages', JSON.stringify(imageList));
-  } catch (_) {}
 
   // Elemen root untuk slideshow
   const root = document.getElementById('slideshow-root');
